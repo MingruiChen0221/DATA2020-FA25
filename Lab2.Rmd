@@ -1,0 +1,224 @@
+---
+title: "Lab 2: Exploratory Data Analysis"
+output:
+  pdf_document: 
+    fig_caption: yes
+  html_document:
+    highlight: pygments
+    theme: cerulean
+  word_document: default
+---
+
+----
+
+**NAME: **  
+
+----
+
+```{r, echo = FALSE}
+library(knitr)
+knitr::opts_chunk$set(fig.show="hold", fig.align="center", fig.pos= "h")
+```
+
+First, load the dslabs and dplyr packages and the diseases dataset we worked with last time.
+```{r eval = FALSE}
+library("dslabs")
+library("dplyr")
+diseases = us_contagious_diseases
+```
+
+# Exploring the Variables  
+One of the first things we should do after loading in a dataset is find out what are the variables. Do you remember the function to do this? Next, we want to check how much data is missing. One way to do this is to use the command **complete.cases**:
+```{r eval = FALSE}
+sum(!complete.cases(diseases))
+nrow(diseases)
+```
+This calculates the number of incomplete rows (some missing data) and then compares it to the total number of rows in the dataset. Since we are not missing much data in this case, we can choose to omit these rows using the **na.omit** command:
+```{r eval = FALSE}
+diseases = na.omit(diseases)
+```
+Otherwise, we could explore which columns contain the most missing data. If a column contains a lot of missing values, it might indicate that we should ignore it. There are no such columns in our case. We will talk about more strategies for dealing with missing data later on in the course. 
+
+As mentioned in class, the **describe** function (which is part of the Hmisc package) can be very useful to get a first look at the columns in the dataset. 
+```{r eval = FALSE}
+install.packages("Hmisc")
+library("Hmisc")
+attach(diseases)
+describe(year)
+describe(disease)
+```
+Note that describe doesn't work well for categorical variables with many levels such as state - we can always use summary instead. 
+Notice that this function reports any missing values as well as useful quantities about the range, mean, and quantiles for continuous variables and the proportions for categorical variables. What are we looking for in the output? We are looking at whether or not the values match our intuition (e.g. count is always non-negative) and noticing any limitations of the data (e.g. the latest year is 2011). We also want to look out for any outliers such as abnormally high or low continuous values or factors that are over- or underrepresented. We also might to measure the variability of continuous variables by measuring their standard deviation:
+```{r eval = FALSE}
+sd(count)
+```
+What do you notice about the standard deviation of count compared to the mean? Why might this be the case?
+
+Beyond quantitative outputs, plotting the distribution of continuous variables can also be helpful. 
+```{r eval = FALSE}
+hist(count)
+plot(density(count))
+```
+Note that **hist** creates a histogram (try adjusting the number of bins - use ?hist to see how to set this parameter) and **density** creates a series of x,y points that can then be plotted. Of course, these plots are not very informative for count. Instead, let's look at a log transformation of the variable.
+```{r eval = FALSE}
+hist(log(count))
+plot(density(log(count)))
+```
+We can also try filtering the data and looking at another variable. 
+```{r eval = FALSE}
+ri.measles = filter(diseases, ((state=="Rhode Island") & (disease=="Measles")))
+hist(ri.measles$population)
+plot(density(ri.measles$population))
+```
+A box plot is also useful to help understand a distribution. Box plots can be especially useful for finding outliers and summarizing the variability of a variable.
+```{r eval = FALSE}
+boxplot(ri.measles$population)
+```
+
+Create a new variable called rate which is equal to 
+\[ 100000*(\text{count}/\text{population})*(52/\text{weeks\textunderscore reporting}) .\]
+What does rate represent? Why might this new variable be helpful when looking at the distributions for different diseases? Run **na.omit** again to remove any records where there are zero weeks reporting. Looking only at records for measles and years prior to 1963 (the year the measles vaccine was introduced), create a histogram and boxplot for rate. Save this filtered dataset as **diseases.sub** for future use. 
+
+# Relationships Between Variables
+One thing that we noticed earlier is that the count is related to the total population size. A quick way to examine the relationship between two continuous variables is to plot them or calculate the correlation.
+```{r eval = FALSE}
+plot(x=population,y=count,xlab="Population",ylab="Count")
+cor(count, population)
+```
+As before, the command **plot** allows us to build a simple scatterplot. The xlab and ylab arguments give the x-axis label and y-axis label, respectively. The argument main can also be used to give a title. Do the results match your intuition? What if we do the same for diseases.sub? 
+```{r eval = FALSE}
+plot(x=diseases.sub$population,y=diseases.sub$count,xlab="Population",ylab="Count")
+cor(diseases.sub$count, diseases.sub$population)
+```
+Here, we can see that the relationship is much stronger. 
+
+When we have one continuous variable and one categorical variable, then we can still use plot to compare the box plots for the continuous variable within each category. Try out the example below - you may need to zoom in to see the different box plots.
+```{r eval = FALSE}
+plot(x=diseases$disease,y=diseases$rate,xlab="Disease",ylab="Rate per 100,000")
+```
+What do you notice?
+
+Last, when looking at the relationship between two categorical variables, we can use **contingency tables**. To do so, we use the command **table**. First, create a new variable in the original diseases dataset called high.rate which represents whether or not the rate is above 100. Then, run the following commands to create a contingency table between high.rate and disease
+```{r eval = FALSE}
+table(diseases$high.rate,diseases$disease)
+```
+Does this match with what we observed in the previous plot?
+
+# Data Visualization Tools
+So far, we have just used built-in plotting functions in R. However, we can get much more creative by using the **ggplot2** package. 
+```{r eval = FALSE}
+install.packages("ggplot2")
+library("ggplot2")
+```
+
+When using ggplot, we can add multiple pieces to a plot. We first start with the data.
+```{r eval = FALSE}
+p = ggplot(data=diseases)
+```
+This starts a new plot called p and indicates that the data used to create this plot will come from diseases. 
+From this we can add on different **geoms**, which are layers. One such geom is a scatter plot 
+```{r eval = FALSE}
+p = p + geom_point(aes(x=year,y=rate,col=disease))
+p
+```
+Here, **geom_point** creates a scatterplot and takes in an **aes** (standing for aesthetic). The only required inputs are x and y for a scatterplot but we can add other inputs including color, shape, size, and fill. The cheat sheet listed at the end of this section includes what options you have for aes depending on which geom you are using. We can also add labels using the same framework.
+```{r eval = FALSE}
+p = p + xlab("Year") + ylab("Rate per 100,000")
+p
+```
+
+Let's try that again. This time, let's plot the overall R.I. rate for each disease over time. 
+```{r eval = FALSE}
+p2 = diseases %>% filter(state=="Rhode Island") %>% ggplot()
+p2 = p2 + geom_line(aes(x=year,y=rate,group=disease,col=disease))
+p2
+```
+Notice that we used piping in the first line to filter by state and used the aes parameter group to create a line for each disease (we also colored by disease). The measles vaccine was introduced in 1963 and the polio vaccine in 1955. Let's add vertical lines for each of these dates to highlight the effect of the vaccine. 
+```{r eval = FALSE}
+p2 = p2 + geom_vline(xintercept=1963,col="gray") 
+p2 = p2 + geom_vline(xintercept=1955,col="gray") 
+p2
+```
+The code above was adapted from IDS (https://rafalab.github.io/dsbook/).
+
+Using ggplot requires some practice. For more information, you can always reference this cheatsheet: https://www.rstudio.com/wp-content/uploads/2015/03/ggplot2-cheatsheet.pdf. Potentially useful geoms to play with include **geom_abline**, **geom_density**, **geom_histogram**, and **geom_bar**. 
+
+# Hypothesis Testing
+Now we will demonstrate how to run some hypothesis tests in R. Let's first consider comparing the rates of measles prior to 1963 in RI to the rates in the rest of the US. Let $\mu_{RI}$ be the mean of the rate of measles in RI prior to 1963 and $\mu_{US\setminus RI}$ be the mean rate of measles in the US not including RI prior to 1963. The null hypothesis will be that the mean rates are the same ($H_0$ : $\mu_{RI} = \mu_{US\setminus RI}$) while the alternative hypothesis is that the means are different ($H_A$: $\mu_{RI} \neq \mu_{US\setminus RI}$). By the central limit theorem, these means are normally distributed, but we do not know the variance. Therefore, we will use a 2-sample $t$-test.
+```{r eval = FALSE}
+rates.ri = diseases %>% 
+  filter((state == "Rhode Island") & (disease == "Measles") & (year <= 1963)) %>%
+  select(rate)
+rates.nonri = diseases %>% 
+  filter((state != "Rhode Island") & (disease == "Measles") & (year <= 1963)) %>% 
+  select(rate)
+t.test(rates.ri,rates.nonri)
+```
+We can see that even though the means are quite different the variance is also very high and we fail to reject the null hypothesis since the $p$-value is $> 0.05$. In other words, there is not enough evidence to state that the mean rate of measles in RI was different to that of the rest of the US. 
+
+We can also run a test to test whether or not two categorical variables are independent. In this case, we will test whether having a high rate of measles (rate > 100) is related to being in RI vs the rest of the US. The null hypothesis is that the two are independent while the alternative hypothesis is that they are related. We use a Pearson's $\chi^2$ test of independence. 
+```{r eval = FALSE}
+diseases$ri = (diseases$state == "Rhode Island")
+diseases.measles = diseases %>% filter((year <= 1963) & (diseases == "Measles"))
+chisq.test(table(diseases.measles$ri, diseases.measles$high.rate), correct = FALSE)
+```
+Again, we can see that we fail to reject the null hypothesis since the $p$-value is 0.2818. For both tests, note that we only have 36 data points in RI. 
+
+# Writing up your EDA
+Whenever you analyze a dataset, it is useful to write up your findings in a clear report. The data analysis assignments throughout this class will have you practice this skill. Below, we give an example of how you might write up your exploratory data analysis (EDA) for the dataset above. Note that this is just an example and there are many "correct" ways to explore the same dataset. For the full code used to create this analysis, see the file Lab2Code.R.
+
+We analyze a dataset of infectious disease records in the US. The dataset used comes from the Tycho project and can be downloaded using the **dslabs** package in R. Each row corresponds to a state's yearly count record for a contagious disease, and the variables are **disease**, **state**, **year**, **weeks_reporting**, **count**, and **population**. Weeks_reporting corresponds to the total number of weeks that disease counts were recorded that year and population corresponds to the state's population for that year (interpolated for non-census years). In our analysis, we will focus on incidents of contagious diseases in RI. We want to understand how the prevalence of diseases changed over time and how these trends relate to the rest of the US. 
+
+We first checked for any missing data and found that only around 1% of the data was missing. This corresponded to entries for which the weeks_reporting was missing. We decided to omit this data in our analysis.  
+
+We next looked at the individual variables. Every state is evenly represented within the dataset with 370 entries each and the year range is from 1928-2011. However, we do not have a record for each disease in each year in each state. In particular, the proportion of records for each disease is given below with measles being the most common and smallpox being the least.
+
+| Value    |  Hepatitis A  |   Measles   |    Mumps |  Pertussis  |    Polio |    Rubella |  Smallpox |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Frequency   |      2346     |   3812     |   1836    |    3730   |     3730    |    1938   |     1274 |
+| Proportion   |    0.126   |    0.204    |   0.098   |    0.200   |    0.200    |   0.104    |   0.068|
+
+This difference in records can be attributed to the years for which each diseases was recorded. See Figure \ref{fig:year.dist}.
+
+```{r year.dist, echo = FALSE, out.width="35%", fig.cap="\\label{fig:year.dist}Record counts by disease for each year."}
+knitr::include_graphics("year.dist.pdf")
+```
+
+We next note that the average number of weeks reporting is 33.6 but that 18.9% of the records have 0 weeks reporting. This is a lot of additional "missing data". A bar plot of the number of records with weeks_reporting = 0 can be found in Figure \ref{fig:missing.weeks}. Again, we notice that this seems to primarily correspond to certain diseases not being recorded over certain time intervals. The increase in missing weeks in recent years may be because the disease is rare enough to not require reporting. Based on this conjecture, we also checked the latest year that a count of > 0 was observed for each disease and see that all diseases were observed in the 2000's except for smallpox, which was last recorded in 1952. In fact there are no incidents of smallpox recorded in RI during these years. 
+
+```{r missing.weeks, echo = FALSE, out.width="35%", fig.cap="\\label{fig:missing.weeks}Record counts with no weeks reporting for each year."}
+knitr::include_graphics("missing.weeks.pdf")
+```
+
+To better understand the occurrence of these diseases within Rhode Island, we filter the data to just the Rhode Island records and plot the count for each diseases over time in Figure \ref{fig:ri}. We can see that many of these counts are very low recently and that there is high fluctuation. Measles was by far the most common disease, especially prior to the 1960s. Similarly, the distribution of counts within Rhode Island is highly skewed. Figure \ref{fig:count} gives the histogram for count and log(count).
+
+```{r ri, echo = FALSE, out.width="40%", fig.cap="\\label{fig:ri}Rhode Island counts and population over time."}
+knitr::include_graphics(c("counts.ri.pdf", "population.ri.pdf"))
+```
+
+```{r count, echo = FALSE, out.width="35%", fig.cap="\\label{fig:count}Histograms for RI counts."}
+knitr::include_graphics(c("hist.count.pdf", "log.count.pdf"))
+```
+
+These counts need to put into perspective though since the population of RI was also changing during this time (see Figure \ref{fig:ri}). In particular, the distribution of population within RI and the whole US is highly variable. To better compare between time periods and states, we add in a variable 
+\[ \text{rate} = 100000*(\text{count}/\text{population})*(52/\text{weeks\textunderscore reporting})).\]
+This corresponds to the estimated yearly rate of the disease per 100,000 people. 
+
+
+Figure \ref{fig:rates} plots the rate of each disease over time within RI and within the US. For reference, we added in vertical lines marking the years of the polio and measles vaccine, respectively, since these two diseases seem to have the most easily observable change in incidence. While the trends look very similar between the two plots, we do see that the rate of measles within RI seems to have been higher and that the rates in general are more variable. This makes sense given that the other is an average over all states. The plots both raise a question as to what contributed to the amount of fluctuation seen in the rate.
+
+```{r rates, echo = FALSE, out.width="45%", fig.cap="\\label{fig:rates}Disease rates over time."}
+knitr::include_graphics(c("rates.ri.png", "rates.us.png"))
+```
+
+We use a 2-sample t-test to test our observation that the polio and measles vaccines seem to have been effective. In particular, we test the null hypothesis that the mean rate of measles in the US prior to 1963 is the same as the mean rate of measles after 1963. The $p$-value for this test was 2.2e-16 so we reject the null hypothesis. Further, the difference in the means was 336.1 so we conclude that there is a significant difference between the mean rate of measles before and after 1963. Similarly, we find a significant difference between the mean rates of polio before and after 1955.  
+
+We also use a 2-sample t-test to test whether Rhode Island suffered a higher rate of measles prior to 1963 than the rest of the US. Our null hypothesis is that the mean rate of measles prior to 1963 in RI is the same as the mean rate of measles in the rest of the US prior to 1963. The $p$-value for this test is $0.3864$ so we fail to reject the null hypothesis. Even though we observe a higher mean in Rhode Island, there is not sufficient evidence that the difference is significant. 
+
+Thinking about this question a little further, we decided to look at the average rate of measles in each state prior to 1963 and find which states had the highest rates. The seven states with the highest rates of measles were Wisconsin (897), Vermont (869), Utah (738), Montana (641), and Alaska (634). Interestingly, several of these states have small populations. However, we do not find a strong correlation between population size and rate of measles prior to 1963 (see Figure \ref{fig:population.rates}). Without any additional characteristics of each state, it is hard to detect any meaningful factors that affected the rate of measles. 
+
+```{r population.rates, echo = FALSE, out.width="35%", fig.cap="\\label{fig:population.rates}State rates prior to 1963."}
+knitr::include_graphics("population.rates.pdf")
+```
+
+While this dataset gave evidence for the effectiveness of vaccines, in future work, it would be interesting to focus on any noticeable resurgence in diseases from the anti-vaccine movement. To do so, we would likely need to collect the most recent disease counts. Also, it would be interesting to look at the characteristics of more recent cases (both individual characteristics such as age and state characteristics). 

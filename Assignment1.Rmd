@@ -1,0 +1,259 @@
+---
+title: "Assignment 1"
+output: pdf_document
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+**NAME: Mingrui Chen **  
+**DUE DATE: February 11th, 6pm** 
+
+Please post your completed homework (including the R code).
+
+
+
+## Problem I (100 pts) 
+This exercise focuses on the data sets country.rda, which can be found in Canvas in the Files item in the folder Data (file name: country.rda). It contains data called gapminder from the Gapminder non-profit organization. The data are 10,545 units and 9 variables. The variables are:
+
+
+country	
+
+continent	
+
+year	
+
+infant_mortality:	infant mortality rate (to interpret, if you divide by 10 you will obtain the percentage)
+
+life_expectancy
+
+fertility
+
+population 
+
+gdp
+
+continent
+
+region
+
+Read and load the data in R. 
+
+```{r}
+library("dplyr")
+library("ggplot2")
+# load("/Users/mingruichen/Documents/Spring-2025/DATA2020/DATA2020-FA25/country.rda")
+  
+```
+
+1) (10 points) Perform a boxplot with ggplot in R where you can see in the x axis each continent and y axis the population just for year 1960, hint: use population/10^6 and use the log transformation. Be careful on writing the axes labels. What continent has the largest median population size? Check in R. Explain what you have found with theoretical details (outliers, symmetry of the distribution, median and interquartile range).
+
+```{r}
+gapminder_1960 <- gapminder %>% filter(year == 1960)
+
+# boxplot of population by continent (log scale)
+p1 <- ggplot(gapminder_1960, aes(x = continent, y = population / 10^6)) +
+  geom_boxplot() +
+  scale_y_log10() +  # Log transformation
+  labs(
+    title = "Boxplot of Population by Continent (1960)",
+    x = "Continent",
+    y = "Population (millions, log scale)"
+  ) +
+  theme_classic()
+
+print(p1)
+
+
+```
+
+#### Attemp: Quantiles
+
+```{r}
+gapminder_1960 %>% group_by(continent) %>% 
+  summarise(
+    min = min(population),
+    Q1 = quantile(population, 0.25),
+    median = median(population),
+    mean = mean(population),
+    Q3 = quantile(population, 0.75),
+    max = max(population),
+    sd = sd(population) 
+  ) %>% 
+  arrange(desc(median))
+```
+
+**Answer:**
+
+- **Europe** has the biggest median population size, which is *7,065,525* 
+
+- This quantile data also indicates that Europe has the biggest median population size, while Asia has the highest mean population size (which doubled the Europe) back to 1960.
+
+
+2) (10 points) Perform a boxplot with ggplot where you can see in the x axis each continent and y axis the population just for year 2010, hint: use population/10^6 and use the log transformation. What continent has the largest median population size in this year? Check in R. Explain what you have found with theoretical details (outliers, symmetry of the distribution, median and interquartile range).
+
+```{r}
+gapminder_2010 <- gapminder %>% filter(year == 2010)
+
+# boxplot of population by continent (log scale)
+p2 <- ggplot(gapminder_2010, aes(x = continent, y = population / 10^6)) +
+  geom_boxplot() +
+  scale_y_log10() +  # Log transformation
+  labs(
+    title = "Boxplot of Population by Continent (2010)",
+    x = "Continent",
+    y = "Population (millions, log scale)"
+  ) +
+  theme_classic()
+
+print(p2)
+
+```
+```{r}
+gapminder_2010 %>% group_by(continent) %>% 
+  summarise(
+    min = min(population),
+    Q1 = quantile(population, 0.25),
+    median = median(population),
+    mean = mean(population),
+    Q3 = quantile(population, 0.75),
+    max = max(population),
+    sd = sd(population) 
+  ) %>% 
+  arrange(desc(median))
+```
+
+**Answer:**
+
+- **Africa** has the biggest median population size of *11,012,406* in 2010, compared to it's 3rd rank back to 1960. 
+
+
+
+3) (10 points) What is the median population size for Africa to the nearest million? What proportion of countries in Europe have populations below 14 million? Perform in R.
+
+#### Question 
+
+- Question, what's the time mark for this question, i.e., 
+```{r}
+
+```
+
+
+4) (10 points) If we use a log transformation, which continent has the largest interquartile range? Perform and plot in R. Explain what you have found, give also the theoretical implications.
+```{r}
+
+```
+
+
+5) (10 points) Compare (in ggplot) the countries in term of population using boxplots with two different colours for year 1960 and 2010. Try to make a plot exactly as Figure 1 (just the colour can change). Explain your result.
+
+```{r, out.width="0.8\\linewidth", include=TRUE, fig.align="center", fig.cap=c("Population per country"), echo=FALSE}
+knitr::include_graphics("plot1.pdf")
+```
+
+```{r} 
+gapminder_compare <- bind_rows(gapminder_1960, gapminder_2010)
+
+ggplot(gapminder_compare, aes(x = continent, y = population / 10^6 , fill = factor(year))) +
+  geom_boxplot() +
+  scale_fill_manual(values = c("1960" = "darkgrey", "2010" = "orange")) +
+  scale_y_log10(breaks = c(1, 10, 100, 1000), 
+                labels = c("1", "10", "100", "1000")) + 
+  labs(
+    title = "Population Distribution by Continent (1960 vs 2010)",
+    y = "Population in millions",
+    x = "Continent",
+    fill = "Year"
+  ) +
+  theme_bw()
+
+```
+**Explanation:**
+
+- This plot compares the population distribution of each continent in year 1960 and year 2010.
+
+- The results show that with all continents have an increase in the general population size (increase in median, lower and upper bound), *Africa* shows the biggest increase in terms of the median population size.
+
+- Another trend is that *Europe* used to ranked first in terms of the median population size in 1960, but now falls to the 4th position and is only higher than the Oceania.
+
+- Through this plot, we can see the population distribution trends across continents by time (only year 1960 and 2010 here though). Specific analysis will then depend on the reserach question. 
+
+
+6) (10 points) Compare (in ggplot) the countries in term of infant mortality using boxplots with two different colours for year 1960 and 2010. Try to make a plot exactly as Figure 2 (just the colour can change).
+
+```{r, out.width="0.8\\linewidth", include=TRUE, fig.align="center", fig.cap=c("Infant Mortality per country"), echo=FALSE}
+knitr::include_graphics("plot2.pdf")
+```
+
+```{r}
+ggplot(gapminder_compare, aes(x = continent, y = infant_mortality , fill = factor(year))) +
+  geom_boxplot() +
+  scale_fill_manual(values = c("1960" = "darkgrey", "2010" = "orange")) +
+  scale_y_log10(breaks = c(10, 100), 
+                labels = c("10", "100")) + 
+  labs(
+    title = "Infant Mortality by Continent (1960 vs 2010)",
+    y = "Infant Mortality",
+    x = "Continent",
+    fill = "Year"
+  ) +
+  theme_bw()
+
+```
+
+**Explanation:**
+
+
+7) (10 points) What proportion of the infant mortality is between 100 and 150? And what is its approximation to a normal distribution of this proportion? What proportion of the infant mortality is greater than 150? And what is its approximation to a normal distribution of the proportions? Perform in R. Explain what you have found, give also the theoretical implications and what theorem or statistical assumptions you are using.
+
+
+```{r}
+
+```
+
+8) (10 points) In ggplot perform both a histogram and a curve for infant mortality, use two different colours for year 1960 and 2010. Does the infertility follow a normal distribution? Are the two distribution symmetric or skewed? Be careful to choose the right x axis for the histogram.
+```{r}
+ggplot(gapminder_compare, aes(x = infant_mortality, fill = factor(year), color = factor(year))) +
+  geom_histogram(aes(y = ..density..), bins = 30, alpha = 0.6, position = "identity") +  # Histogram with density normalization
+  geom_density(alpha=0.2) +  # Density curve
+  scale_fill_manual(values = c("1960" = "darkgrey", "2010" ="orange")) +  # Custom fill colors
+  scale_color_manual(values = c("1960" = "darkgrey", "2010" = "orange")) +  # Custom line colors
+  labs(
+    title = "Infant Mortality Distribution (1960 vs 2010)",
+    x = "Infant Mortality Rate (per 1000 live births)",
+    y = "Density",
+    fill = "Year",
+    color = "Year"
+  ) +
+  theme_minimal()
+
+```
+
+9) (10 points) Perform a q-q plot for the infant mortality to check if this variables is normal or not. Write the label of the axes in the appropriate way. Explain what you have found including the theoretical implications.
+
+```{r}
+
+```
+
+10) (10 points) Compare the regions in term of infant mortality for the two years 1960 and 2010 using the barplot. Try to make a plot exactly as Figure 3 (just the colour can change). Create a binary variable, with value 1 if life-expectancy is greater than 65 (group A), 0 otherwise (group B). Then perform the appropriate two sample test to know if the mean of the infant mortality is the same in group A and B (remember to check the variance of the two groups). Explain your results.
+
+```{r, out.width="0.8\\linewidth", include=TRUE, fig.align="center", fig.cap=c("Infant Mortality per region"), echo=FALSE}
+knitr::include_graphics("plot3.pdf")
+```
+
+```{r}
+ggplot(gapminder_compare, aes(x = infant_mortality, y = reorder(region, infant_mortality), fill = factor(year))) +
+  geom_bar(stat = "identity", position = "dodge") +  # Creates side-by-side bars
+  labs(
+    title = "Infant Mortality by Region (1960 vs 2010)",
+    x = "Infant Mortality",
+    y = "Region",
+    fill = "Year"
+  ) +
+  theme_bw()
+
+```
+
